@@ -145,6 +145,10 @@ fn select_winners_pays_recipient_and_bumps_profile() {
     let op_select = BytesN::random(&ctx.env);
     ctx.events.select_winners(&bounty_id, &winners, &op_select);
 
+    // Pull-model: claim prize.
+    let claim_op = BytesN::random(&ctx.env);
+    ctx.events.claim_prize(&bounty_id, &ctx.applicant, &1_u32, &50_u32, &claim_op);
+
     // Token: winner received the full budget (no second-layer fee on release).
     let token = token::Client::new(&ctx.env, &ctx.token_addr);
     assert_eq!(token.balance(&ctx.applicant), TOTAL_BUDGET);
@@ -164,15 +168,21 @@ fn select_winners_pays_recipient_and_bumps_profile() {
     assert_eq!(event.status, EventStatus::Completed);
     assert_eq!(event.remaining_escrow, 0);
 
-    // Winner record stored.
+    // Winner records: anchor + claim row.
     let winner_list = ctx.events.get_winners(&bounty_id);
-    assert_eq!(winner_list.len(), 1);
-    let recorded = winner_list.get(0).unwrap();
-    assert_eq!(recorded.recipient, ctx.applicant);
-    assert_eq!(recorded.position, 1);
-    assert_eq!(recorded.amount, TOTAL_BUDGET);
-    assert_eq!(recorded.milestone, None);
-    assert!(recorded.paid_at.is_some());
+    assert_eq!(winner_list.len(), 2);
+    let anchor = winner_list.get(0).unwrap();
+    assert_eq!(anchor.recipient, ctx.applicant);
+    assert_eq!(anchor.position, 1);
+    assert_eq!(anchor.amount, TOTAL_BUDGET);
+    assert_eq!(anchor.milestone, None);
+    assert!(anchor.paid_at.is_none());
+    let claim = winner_list.get(1).unwrap();
+    assert_eq!(claim.recipient, ctx.applicant);
+    assert_eq!(claim.position, 1);
+    assert_eq!(claim.amount, TOTAL_BUDGET);
+    assert_eq!(claim.milestone, None);
+    assert!(claim.paid_at.is_some());
 }
 
 #[test]
@@ -283,6 +293,10 @@ fn select_winners_handles_multi_recipient_distribution() {
     let op_select = BytesN::random(&ctx.env);
     ctx.events.select_winners(&bounty_id, &winners, &op_select);
 
+    // Pull-model: each winner claims their prize.
+    ctx.events.claim_prize(&bounty_id, &winner_a, &1_u32, &50_u32, &BytesN::random(&ctx.env));
+    ctx.events.claim_prize(&bounty_id, &winner_b, &2_u32, &25_u32, &BytesN::random(&ctx.env));
+
     let token = token::Client::new(&ctx.env, &ctx.token_addr);
     let amount_a = TOTAL_BUDGET * 60 / 100;
     let amount_b = TOTAL_BUDGET * 40 / 100;
@@ -379,7 +393,7 @@ fn cancel_after_select_winners_refunds_only_remaining() {
     let op_create = BytesN::random(&ctx.env);
     let bounty_id = ctx.events.create_event(&params, &op_create);
 
-    // Pay one winner (60%).
+    // Select winner for position 1 (60%).
     let winner_a = Address::generate(&ctx.env);
     let winners = soroban_sdk::vec![
         &ctx.env,
@@ -391,6 +405,10 @@ fn cancel_after_select_winners_refunds_only_remaining() {
     ];
     let op_select = BytesN::random(&ctx.env);
     ctx.events.select_winners(&bounty_id, &winners, &op_select);
+
+    // Pull-model: winner claims their prize (60%).
+    let claim_op = BytesN::random(&ctx.env);
+    ctx.events.claim_prize(&bounty_id, &winner_a, &1_u32, &50_u32, &claim_op);
 
     // Now cancel — owner should get the remaining 40%.
     let token = token::Client::new(&ctx.env, &ctx.token_addr);
@@ -1023,6 +1041,9 @@ fn select_winners_pays_against_remaining_escrow_including_top_ups() {
     let op_select = BytesN::random(&ctx.env);
     ctx.events.select_winners(&bounty_id, &winners, &op_select);
 
+    // Pull-model: claim prize.
+    ctx.events.claim_prize(&bounty_id, &ctx.applicant, &1_u32, &50_u32, &BytesN::random(&ctx.env));
+
     let token = token::Client::new(&ctx.env, &ctx.token_addr);
     // Winner receives the full live escrow at select time, not the
     // original total_budget.
@@ -1102,6 +1123,9 @@ fn manager_override_can_select_winners() {
     ];
     let op_select = BytesN::random(&ctx.env);
     ctx.events.select_winners(&bounty_id, &winners, &op_select);
+
+    // Pull-model: claim prize to drain escrow and complete the event.
+    ctx.events.claim_prize(&bounty_id, &ctx.applicant, &1_u32, &0_u32, &BytesN::random(&ctx.env));
 
     // Managed event settled via the manager authority.
     let event = ctx.events.get_event(&bounty_id);

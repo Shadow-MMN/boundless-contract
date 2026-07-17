@@ -249,6 +249,10 @@ pub enum DataKey {
     // Grant milestone tracking: (event_id, recipient, milestone) -> bool
     MilestoneClaimed(u64, Address, u32),
 
+    // Prize claim tracking for Single-release (bounty/hackathon) pull-model:
+    // (event_id, recipient, position) -> bool. Written by claim_prize.
+    PrizeClaimed(u64, Address, u32),
+
     // Crowdfunding: count of milestones already claimed against an event.
     // Used by the dynamic-payout math (amount = remaining_escrow /
     // (total_milestones - claimed_count)). Only written/read for

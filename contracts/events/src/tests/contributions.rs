@@ -411,6 +411,9 @@ fn cancel_at_boundary_pays_partners_full_no_owner_residual() {
     let op_select = BytesN::random(&ctx.env);
     ctx.events.select_winners(&id, &winners, &op_select);
 
+    // Pull-model: claim prize to drain 50% of escrow (1000).
+    ctx.events.claim_prize(&id, &winner_a, &1_u32, &50_u32, &BytesN::random(&ctx.env));
+
     // The event isn't Completed because remaining (1000) != 0.
     let after_select = ctx.events.get_event(&id);
     assert_eq!(after_select.status, EventStatus::Active);

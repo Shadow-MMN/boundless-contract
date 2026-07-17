@@ -83,4 +83,7 @@ pub enum Error {
 
     // Cross-contract
     ProfileCallFailed = 80,
+
+    // Prize claims (pull-model for Single-release events)
+    PrizeAlreadyClaimed = 91,
 }
