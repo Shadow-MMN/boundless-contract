@@ -10,6 +10,7 @@ use soroban_sdk::{
 };
 
 use crate::idempotency::{self, tag};
+use crate::storage;
 use crate::types::{CreateEventParams, Pillar, ReleaseKind, WinnerSpec};
 use crate::{EventsContract, EventsContractClient};
 
@@ -207,6 +208,41 @@ fn events_domain_child_op_id_replay_still_rejected() {
         replay.is_err(),
         "true replay of the same events-domain op_id must be rejected"
     );
+}
+
+/// Calling create_event when the stored next_event_id is at u64::MAX must revert
+/// with EventIdOverflow rather than silently returning the same id forever.
+#[test]
+fn event_id_overflow_reverts() {
+    let ctx = setup();
+    let env = &ctx.env;
+
+    // Set the stored next_event_id to u64::MAX so the increment overflows.
+    env.as_contract(&ctx.events_id, || {
+        storage::set_next_event_id(env, u64::MAX);
+    });
+
+    let params = CreateEventParams {
+        pillar: Pillar::Bounty,
+        owner: ctx.owner.clone(),
+        token: ctx.token_addr.clone(),
+        total_budget: TOTAL_BUDGET,
+        release_kind: ReleaseKind::Single,
+        content_uri: String::from_str(env, "https://api.boundless.fi/events/overflow"),
+        title: String::from_str(env, "Overflow"),
+        deadline: Some(env.ledger().timestamp() + 86_400),
+        winner_distribution: dist_100(env),
+        fee_bps_override: None,
+        manager: None,
+    };
+
+    let err = ctx
+        .events
+        .try_create_event(&params, &BytesN::random(env))
+        .err()
+        .expect("event creation should fail when next_event_id overflows")
+        .unwrap();
+    assert_eq!(err, crate::errors::Error::EventIdOverflow);
 }
 
 /// Events-side OpSeen is namespaced by the authorizing caller: a permissionless

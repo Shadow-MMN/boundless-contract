@@ -23,7 +23,7 @@ pub fn register(
     }
 
     let current = storage::get_earnings(env, &user, &token);
-    let new = current.saturating_add(amount);
+    let new = current.checked_add(amount).ok_or(Error::EarningsOverflow)?;
     storage::set_earnings(env, &user, &token, new);
 
     evt::EarningsRegistered {

@@ -22,6 +22,7 @@ pub enum Error {
     ReasonRequired = 13,
 
     OpAlreadySeen = 20,
+    EarningsOverflow = 21,
     Paused = 30,
 
     UpgradeNotProposed = 40,

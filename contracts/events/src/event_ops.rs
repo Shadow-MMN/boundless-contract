@@ -128,7 +128,7 @@ pub fn create_event(env: &Env, params: CreateEventParams, op_id: BytesN<32>) -> 
         );
     }
 
-    let id = idempotency::next_event_id(env);
+    let id = idempotency::next_event_id(env)?;
     let record = EventRecord { id, ..provisional };
     storage::set_event(env, id, &record);
     storage::set_non_owner_contribution_total(env, id, 0);

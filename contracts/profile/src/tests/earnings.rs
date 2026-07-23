@@ -179,7 +179,7 @@ fn register_earnings_rejects_duplicate_op_id() {
 }
 
 #[test]
-fn register_earnings_saturating_add() {
+fn register_earnings_overflow_reverts() {
     let ctx = setup();
     ctx.client.set_events_contract(&events_addr(&ctx.env));
 
@@ -187,11 +187,19 @@ fn register_earnings_saturating_add() {
     let t = token(&ctx.env);
 
     ctx.client
-        .register_earnings(&u, &t, &(i128::MAX - 1), &BytesN::random(&ctx.env));
-    assert_eq!(ctx.client.get_earnings(&u, &t), i128::MAX - 1);
+        .register_earnings(&u, &t, &i128::MAX, &BytesN::random(&ctx.env));
+    assert_eq!(ctx.client.get_earnings(&u, &t), i128::MAX);
 
-    ctx.client
-        .register_earnings(&u, &t, &100_i128, &BytesN::random(&ctx.env));
+    // A second registration must overflow and revert.
+    let err = ctx
+        .client
+        .try_register_earnings(&u, &t, &1_i128, &BytesN::random(&ctx.env))
+        .err()
+        .expect("overflow should revert")
+        .unwrap();
+    assert_eq!(err, Error::EarningsOverflow);
+
+    // State unchanged: still at i128::MAX.
     assert_eq!(ctx.client.get_earnings(&u, &t), i128::MAX);
 }
 

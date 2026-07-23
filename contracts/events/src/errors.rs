@@ -70,6 +70,7 @@ pub enum Error {
     MigrationAlreadyApplied = 69,
 
     Paused = 70,
+    EventIdOverflow = 71,
 
     ProfileCallFailed = 80,
 

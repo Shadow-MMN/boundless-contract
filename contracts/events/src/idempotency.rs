@@ -25,11 +25,13 @@ pub fn id_base(env: &Env) -> u64 {
     (seq as u64) << 32
 }
 
-pub fn next_event_id(env: &Env) -> u64 {
+pub fn next_event_id(env: &Env) -> Result<u64, Error> {
     let base = id_base(env);
-    let id = storage::get_next_event_id(env, base.saturating_add(1));
-    storage::set_next_event_id(env, id.saturating_add(1));
-    id
+    let fallback = base.checked_add(1).ok_or(Error::EventIdOverflow)?;
+    let id = storage::get_next_event_id(env, fallback);
+    let next = id.checked_add(1).ok_or(Error::EventIdOverflow)?;
+    storage::set_next_event_id(env, next);
+    Ok(id)
 }
 
 pub mod tag {
