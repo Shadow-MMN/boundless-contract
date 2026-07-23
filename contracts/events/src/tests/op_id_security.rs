@@ -25,6 +25,7 @@ struct Ctx<'a> {
     events_id: Address,
     profile: ProfileContractClient<'a>,
     owner: Address,
+    fee_account: Address,
     applicant: Address,
     token_addr: Address,
 }
@@ -69,6 +70,7 @@ fn setup<'a>() -> Ctx<'a> {
         events_id,
         profile,
         owner,
+        fee_account,
         applicant,
         token_addr,
     }
@@ -217,7 +219,10 @@ fn event_id_overflow_reverts() {
     let ctx = setup();
     let env = &ctx.env;
 
-    // Set the stored next_event_id to u64::MAX so the increment overflows.
+    let token = token::Client::new(env, &ctx.token_addr);
+    let owner_balance_before = token.balance(&ctx.owner);
+    let fee_balance_before = token.balance(&ctx.fee_account);
+
     env.as_contract(&ctx.events_id, || {
         storage::set_next_event_id(env, u64::MAX);
     });
@@ -243,6 +248,25 @@ fn event_id_overflow_reverts() {
         .expect("event creation should fail when next_event_id overflows")
         .unwrap();
     assert_eq!(err, crate::errors::Error::EventIdOverflow);
+
+    // Verify transaction rollback: no funds moved, no event persisted.
+    assert_eq!(
+        token.balance(&ctx.owner),
+        owner_balance_before,
+        "owner balance unchanged after failed create_event"
+    );
+    assert_eq!(
+        token.balance(&ctx.fee_account),
+        fee_balance_before,
+        "fee account balance unchanged after failed create_event"
+    );
+    env.as_contract(&ctx.events_id, || {
+        let next_id = storage::get_next_event_id(env, 0);
+        assert_eq!(
+            next_id, u64::MAX,
+            "next_event_id unchanged after failed create_event"
+        );
+    });
 }
 
 /// Events-side OpSeen is namespaced by the authorizing caller: a permissionless

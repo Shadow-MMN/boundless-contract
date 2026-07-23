@@ -190,7 +190,6 @@ fn register_earnings_overflow_reverts() {
         .register_earnings(&u, &t, &i128::MAX, &BytesN::random(&ctx.env));
     assert_eq!(ctx.client.get_earnings(&u, &t), i128::MAX);
 
-    // A second registration must overflow and revert.
     let err = ctx
         .client
         .try_register_earnings(&u, &t, &1_i128, &BytesN::random(&ctx.env))
@@ -198,8 +197,6 @@ fn register_earnings_overflow_reverts() {
         .expect("overflow should revert")
         .unwrap();
     assert_eq!(err, Error::EarningsOverflow);
-
-    // State unchanged: still at i128::MAX.
     assert_eq!(ctx.client.get_earnings(&u, &t), i128::MAX);
 }
 
