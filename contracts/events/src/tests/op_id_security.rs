@@ -263,7 +263,8 @@ fn event_id_overflow_reverts() {
     env.as_contract(&ctx.events_id, || {
         let next_id = storage::get_next_event_id(env, 0);
         assert_eq!(
-            next_id, u64::MAX,
+            next_id,
+            u64::MAX,
             "next_event_id unchanged after failed create_event"
         );
     });

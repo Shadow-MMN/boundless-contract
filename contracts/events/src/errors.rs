@@ -15,8 +15,8 @@ pub enum Error {
     NotAdmin = 11,
     // Shared by both two-step rotations (admin and event manager): no pending
     // proposal / target mismatch (12) and pending proposal expired (13). The
-    // enum is at the 50-case XDR cap, so the manager flow reuses these rather
-    // than adding variants.
+    // manager flow reuses these because the two flows are structurally
+    // identical, not to duplicate a variant per flow.
     PendingRotationMismatch = 12,
     PendingRotationExpired = 13,
 
@@ -54,9 +54,8 @@ pub enum Error {
 
     OpAlreadySeen = 60,
 
-    // Also returned by append_submission's cap check — the enum is at
-    // the 50-case XDR cap, so the hackathon submission cap reuses this
-    // rather than adding a variant.
+    // Also returned by append_submission's cap check: the hackathon submission
+    // cap reuses this rather than adding a near-duplicate "TooManySubmissions".
     TooManyContributors = 61,
 
     CancellationNotStarted = 62,
@@ -74,6 +73,7 @@ pub enum Error {
 
     ProfileCallFailed = 80,
 
-    // Enum is at the 50-case XDR cap; consolidate before adding another.
+    // contracterror caps at 50 cases (48 used). Discriminants are not dense —
+    // 91 is a numeric label, not the case count.
     PrizeAlreadyClaimed = 91,
 }
